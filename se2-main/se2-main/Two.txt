@@ -1,0 +1,23 @@
+Operation	Command
+Start Minikube	minikube start
+Check Minikube	minikube status
+Get nodes	kubectl get nodes
+Create deployment	kubectl create deployment app --image=user/app
+Get deployments	kubectl get deployments
+Get Pods	kubectl get pods
+Describe Pod	kubectl describe pod POD_NAME
+Pod logs	kubectl logs POD_NAME
+Scale to 4	kubectl scale deployment app --replicas=4
+Scale to 5	kubectl scale deployment app --replicas=5
+Expose NodePort	kubectl expose deployment app --type=NodePort --port=80 --target-port=8080
+Get services	kubectl get services
+Access application	minikube service app
+Delete Pod	kubectl delete pod POD_NAME
+Rolling update	kubectl set image deployment/app app=user/app:v2
+Rollback	kubectl rollout undo deployment/app
+Rollout status	kubectl rollout status deployment/app
+Get endpoints	kubectl get endpoints
+Get events	kubectl get events
+Delete deployment	kubectl delete deployment app
+Delete service	kubectl delete service app
+Stop Minikube	minikube stop

@@ -1,0 +1,97 @@
+Run these commands in order after connecting to your Ubuntu EC2 instance
+through EC2 Instance Connect.
+
+AWS prerequisites: - SSH TCP 22 from your administrator’s public IP
+(/32). - For browser-based EC2 Instance Connect, allow TCP 22 from the
+AWS-managed EC2 Instance Connect prefix list for your region. - Allow
+TCP 8080 from the intended client IP addresses in the Security Group. -
+The instance needs a public IPv4 address and a route through an Internet
+Gateway.
+
+1. Update Ubuntu
+
+    sudo apt update
+    sudo apt upgrade -y
+
+2. Install Git, Java 8, Maven, and Docker
+
+    sudo apt install git openjdk-8-jdk maven docker.io -y
+
+3. Verify installations
+
+    git --version
+    java -version
+    mvn -version
+    docker --version
+
+4. Start Docker
+
+    sudo systemctl enable --now docker
+    sudo systemctl status docker --no-pager
+
+5. Clone the OLTRS repository
+
+    cd ~
+    git clone https://github.com/archanareddyse/OLTRS.git
+    cd ~/OLTRS
+
+6. Build the Maven WAR
+
+    mvn clean package
+
+7. Confirm the WAR file exists
+
+    ls -lh target/ticket-reservation.war
+
+8. Create the Dockerfile
+
+    cat > Dockerfile <<'EOF'
+    FROM tomcat:9.0-jdk8
+    RUN rm -rf /usr/local/tomcat/webapps/*
+    COPY target/ticket-reservation.war /usr/local/tomcat/webapps/ROOT.war
+    EXPOSE 8080
+    CMD ["catalina.sh", "run"]
+    EOF
+
+9. Build the Docker image
+
+    sudo docker build -t oltrs-app .
+
+10. Run the container
+
+    sudo docker run -d --name oltrs-container -p 8080:8080 oltrs-app
+
+11. Verify the container
+
+    sudo docker ps
+
+12. Test the application inside EC2
+
+    curl -I http://localhost:8080/
+
+Expected result: an HTTP response such as HTTP/1.1 200.
+
+13. Inspect logs if something fails
+
+    sudo docker logs --tail 100 oltrs-container
+
+14. Open the application
+
+Replace the placeholder with the EC2 instance’s current Public IPv4
+address:
+
+    http://<EC2_PUBLIC_IP>:8080/
+
+Rebuild after changing the application
+
+If the container already exists, remove it before recreating it:
+
+    sudo docker rm -f oltrs-container
+    mvn clean package
+    sudo docker build -t oltrs-app .
+    sudo docker run -d --name oltrs-container -p 8080:8080 oltrs-app
+
+Note: Execute each section in order. If Maven packaging or Docker image
+building fails, stop and resolve that error before continuing. The
+public IP can change after an EC2 stop/start unless an Elastic IP is
+associated.

@@ -1,0 +1,13 @@
+docker build -t metro-app1:latest .
+minikube image load metro-app1:latest
+kubectl create deployment metro-app --image=metro-app1:latest
+kubectl patch deployment metro-app -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"metro-app\",\"imagePullPolicy\":\"Never\"}]}}}}"
+kubectl get pods
+kubectl scale deployment metro-app --replicas=4
+kubectl get deployments
+kubectl get pods
+kubectl delete pod POD_NAME
+kubectl get pods -w
+kubectl get deployments
+kubectl get replicasets
+kubectl get pods

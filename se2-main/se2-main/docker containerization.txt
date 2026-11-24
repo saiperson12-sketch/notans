@@ -1,0 +1,59 @@
+docker pull mysql:8.0
+docker pull wordpress:latest
+docker images
+docker network create library-net
+docker network ls
+docker volume create mysql-data
+docker volume ls
+create docker-compose.yml 
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: library-db
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: library
+      MYSQL_USER: libraryuser
+      MYSQL_PASSWORD: lib123
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    networks:
+      - library-net
+
+  wordpress:
+    image: wordpress:latest
+    container_name: library-wp
+    restart: always
+
+    ports:
+      - "8080:80"
+
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: libraryuser
+      WORDPRESS_DB_PASSWORD: lib123
+      WORDPRESS_DB_NAME: library
+
+    depends_on:
+      - db
+
+    networks:
+      - library-net
+
+volumes:
+  mysql-data:
+    external: true
+
+networks:
+  library-net:
+    external: true
+
+docker compose up -d
+docker stop library-db
+docker start library-db
+docker kill library-db

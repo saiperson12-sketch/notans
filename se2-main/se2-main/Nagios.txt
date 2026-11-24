@@ -1,0 +1,85 @@
+Steps to Install and Run Nagios Using Docker
+Step 1: Pull the Nagios Docker Image
+Open a terminal or command prompt.
+Execute the following command to download the latest Nagios Docker image:
+bash
+docker pull jasonrivers/nagios:latest
+
+Step 2: Run the Nagios Container
+
+Execute the following command to create and start the Nagios container:
+
+bash
+docker run --name nagiosdemo -p 8888:80 jasonrivers/nagios:latest
+
+
+Command Explanation:
+
+--name nagiosdemo: Assigns a name to the container.
+-p 8888:80: Maps port 8888 on the host machine to port 80 inside the container.
+jasonrivers/nagios:latest: Specifies the Nagios Docker image.
+Step 3: Access the Nagios Dashboard
+Open your web browser.
+Navigate to the following URL:
+
+http://localhost:8888
+
+Log in using the default credentials:
+Username: nagiosadmin
+Password: nagios
+After logging in, explore the following sections:
+Hosts: View the systems being monitored.
+Services: Check the services and tasks being monitored, such as CPU usage.
+Alerts: View recent notifications and alerts.
+Step 4: Monitor Host Details
+Navigate to the Hosts menu.
+Select a host to open its Host Information page.
+Observe the following details:
+
+Key Information:
+
+Host Status: Indicates whether the host is UP or DOWN.
+Metrics: View available monitoring information, such as CPU usage, memory status, and network activity.
+Actions: Perform monitoring-related actions, such as rescheduling checks, disabling notifications, or scheduling downtime.
+Step 5: Stop and Remove Nagios
+
+After completing the monitoring activity, follow these steps to stop and remove the Nagios container.
+
+5.1 Stop the Container
+
+Execute the following command:
+
+bash
+docker stop nagiosdemo
+
+5.2 Remove the Container
+
+Execute the following command:
+
+bash
+docker rm nagiosdemo
+
+5.3 Remove the Docker Image (Optional)
+List the available Docker images:
+bash
+docker images
+
+Remove the Nagios image:
+bash
+docker rmi jasonrivers/nagios:latest
+
+Step 6: Observe the Nagios Docker Container
+Open Docker Desktop.
+Navigate to the Images section and verify that the Nagios image has been downloaded successfully.
+Navigate to the Containers section.
+Observe the running Nagios container named nagiosdemo.
+Verify that port 8888 on the host machine is mapped to port 80 inside the container.
+Confirm that the Nagios dashboard is accessible through:
+
+http://localhost:8888
+
+Expected Result
+
+Nagios is successfully installed and running inside a Docker container. The Nagios monitoring dashboard is accessible through port 8888, allowing users to monitor hosts, services, and alerts.
+
+Note: Docker Hub displays repository images, whereas running containers and port mappings can be observed in Docker Desktop or by executing docker ps in the terminal.

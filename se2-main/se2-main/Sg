@@ -1,0 +1,8 @@
+Type	Port	Source
+SSH	22	My IP(Public IP)
+HTTP	80	Anywhere
+HTTPS	443	Anywhere
+Custom TCP	8080	Anywhere
+
+If you use EC2 Instance Connect in the browser, and it fails with SSH timeout, 
+temporarily allow SSH from Anywhere (0.0.0.0/0) in your AWS Academy lab. After connecting, restrict it again.

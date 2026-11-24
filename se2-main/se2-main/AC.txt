@@ -1,0 +1,614 @@
+SOFTWARE ENGINEERING LAB INTERNAL II
+
+Consolidated command reference – SET-1 to SET-9
+
+This reference consolidates the practical workflows in your uploaded
+sets and the Cloud Deployment using AWS handout. Replace placeholders
+(REPO_URL, PROJECT, IMAGE, APP_PORT, DOCKERHUB_USER) with the exact
+values in the question. Do not assume every question uses the same port,
+repository, OS, or deployment method.
+
+0. Important ports and rules
+
+-   SSH 22: normally My IP; for browser EC2 Instance Connect, allow the
+    regional EC2 Instance Connect managed prefix list or troubleshoot
+    its source access.
+-   HTTP 80: public website.
+-   HTTPS 443: only useful when TLS/certificate is configured.
+-   Flask 5000: Flask API when requested.
+-   Tomcat 8080: common Tomcat container port.
+-   9090: use when explicitly required (e.g. SET-5 AWS Q4(c)).
+-   MySQL 3306: keep private; do not expose to the internet.
+-   For Docker -p 9090:8080, browse http://PUBLIC_IP:9090.
+
+1. Docker basic commands
+
+    docker --version
+    docker info
+    docker ps
+    docker ps -a
+    docker images
+    docker pull nginx:latest
+    docker pull mysql:8
+    docker pull wordpress:latest
+    docker pull tomcat:9
+    docker build -t IMAGE .
+    docker run -d --name CONTAINER -p HOST_PORT:CONTAINER_PORT IMAGE
+    docker logs CONTAINER
+    docker logs -f CONTAINER
+    docker exec -it CONTAINER sh
+    docker stop CONTAINER
+    docker start CONTAINER
+    docker restart CONTAINER
+    docker rm -f CONTAINER
+    docker rmi IMAGE
+    docker port CONTAINER
+
+2. Docker Compose – Flask API + Nginx (SET-5 Q1)
+
+Example docker-compose.yml (adjust build paths and Nginx config to your
+project):
+
+    services:
+      flask:
+        build: ./flask
+        container_name: flask-api
+        ports:
+          - "5000:5000"
+        restart: unless-stopped
+      nginx:
+        image: nginx:latest
+        container_name: nginx-web
+        ports:
+          - "80:80"
+        depends_on:
+          - flask
+        restart: unless-stopped
+
+    docker compose config
+    docker compose up -d --build
+    docker compose ps
+    docker compose logs
+    docker compose logs -f flask
+    docker compose stop
+    docker compose start
+    docker compose restart
+    docker compose down
+
+If port 80 is occupied, map "8081:80" and browse http://localhost:8081.
+The Flask Dockerfile and Nginx reverse-proxy configuration must exist if
+the project expects Nginx to forward requests to Flask.
+
+3. Docker Compose – WordPress + MySQL (SET-1 / SET-6)
+
+Example docker-compose.yml:
+
+    services:
+      db:
+        image: mysql:8
+        environment:
+          MYSQL_ROOT_PASSWORD: change_root_password
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wpuser
+          MYSQL_PASSWORD: change_user_password
+        volumes:
+          - db_data:/var/lib/mysql
+        restart: unless-stopped
+      wordpress:
+        image: wordpress:latest
+        ports:
+          - "8080:80"
+        environment:
+          WORDPRESS_DB_HOST: db:3306
+          WORDPRESS_DB_USER: wpuser
+          WORDPRESS_DB_PASSWORD: change_user_password
+          WORDPRESS_DB_NAME: wordpress
+        depends_on:
+          - db
+        restart: unless-stopped
+    volumes:
+      db_data:
+
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose logs db
+    docker compose logs wordpress
+    docker compose stop
+    docker compose start
+    docker compose down
+    docker compose down -v
+
+Open http://localhost:8080. Compose creates a default network; WordPress
+reaches MySQL by service name db. Named volume db_data preserves
+database files. depends_on controls startup order but does not guarantee
+MySQL is ready.
+
+4. Docker Compose scenario commands (SETS 7, 8, 9)
+
+    docker compose stop                 # stop, retain containers
+    docker compose start                # restart stopped containers
+    docker compose down                 # remove containers and default network
+    docker compose down -v              # also remove volumes (data loss risk)
+    docker compose up -d                # apply changes and start/recreate services
+    docker compose stop backend         # stop only backend service
+    docker compose ps
+    docker compose logs -f
+
+5. Jenkins Freestyle Project (SETS 1, 2, 3)
+
+UI workflow: 1. Manage Jenkins -> Tools / Global Tool Configuration:
+configure JDK and Maven. 2. New Item -> Freestyle project -> OK. 3.
+Source Code Management -> Git -> enter exact repository URL and branch
+(*/main only if the repository branch is main). 4. Build Triggers: Poll
+SCM or GitHub hook trigger for GITScm polling. 5. Build step: Invoke
+top-level Maven targets, or Execute Windows batch command / Execute
+shell with Maven goals. 6. Maven goals: clean test package (or those
+specified in question). 7. Post-build Actions -> Archive artifacts:
+target/*.war and/or target/*.jar. 8. Save -> Build Now -> Console
+Output.
+
+Maven commands:
+
+    mvn clean
+    mvn compile
+    mvn test
+    mvn package
+    mvn install
+    mvn clean package
+    mvn clean install
+
+compile compiles source; test runs tests; package creates JAR/WAR in
+target; install also installs the artifact in the local Maven
+repository.
+
+6. Jenkins Scripted Pipeline (SETS 4, 5, 6, 7, 9)
+
+Linux Jenkins agent (Scripted Pipeline):
+
+    node {
+        properties([pipelineTriggers([githubPush()])])
+
+        stage('Checkout') {
+            git branch: 'main',
+                url: 'https://github.com/OWNER/REPOSITORY.git'
+        }
+        stage('Clean') {
+            sh 'mvn clean'
+        }
+        stage('Build') {
+            sh 'mvn compile'
+        }
+        stage('Test') {
+            sh 'mvn test'
+        }
+        stage('Package') {
+            sh 'mvn package'
+        }
+        stage('Install') {
+            sh 'mvn install'
+        }
+        stage('Archive') {
+            archiveArtifacts artifacts: 'target/*.jar,target/*.war',
+                             allowEmptyArchive: true
+        }
+    }
+
+Windows Jenkins agent: replace sh with bat, e.g. bat 'mvn clean',
+bat 'mvn test'. Do not mix sh and bat. Use the exact repo URL and branch
+from the question. If the repository’s default branch is not main,
+change it.
+
+If a configured Maven tool named Maven3 is required:
+
+    def mvnHome = tool 'Maven3'
+    def mvn = "${mvnHome}/bin/mvn"
+    sh "${mvn} clean package"
+
+Adapt the executable path/command for Windows.
+
+7. Declarative Jenkins Pipeline template (only if allowed)
+
+Windows example:
+
+    pipeline {
+        agent any
+        triggers { githubPush() }
+        stages {
+            stage('Checkout') {
+                steps {
+                    git branch: 'main',
+                        url: 'https://github.com/OWNER/REPOSITORY.git'
+                }
+            }
+            stage('Clean')   { steps { bat 'mvn clean' } }
+            stage('Build')   { steps { bat 'mvn compile' } }
+            stage('Test')    { steps { bat 'mvn test' } }
+            stage('Package') { steps { bat 'mvn package' } }
+            stage('Install') { steps { bat 'mvn install' } }
+        }
+        post {
+            success {
+                archiveArtifacts artifacts: 'target/*.jar,target/*.war',
+                                 allowEmptyArchive: true
+                echo 'Build successful'
+            }
+            failure { echo 'Build failed. Check Console Output.' }
+            always  { echo 'Pipeline completed.' }
+        }
+    }
+
+Your SET-5 Q2 worked with Declarative syntax and bat because Jenkins was
+running on Windows. If the question explicitly asks Scripted Pipeline,
+use the node { } template above.
+
+8. GitHub webhook (SETS 4, 5, 7, 8, 9)
+
+-   Install/enable GitHub integration plugin if needed.
+-   In the Jenkins job, enable GitHub hook trigger for GITScm polling
+    (or use the matching trigger supported by the job/plugin).
+-   GitHub repository -> Settings -> Webhooks -> Add webhook.
+-   Payload URL: http://JENKINS_PUBLIC_HOST/github-webhook/
+-   Content type: application/json; select push events.
+-   Save, push a commit, then inspect webhook delivery and Jenkins Build
+    History.
+
+Important: GitHub cannot call a Jenkins instance available only at
+localhost. Use Poll SCM for local-only Jenkins, or a properly secured
+public endpoint/tunnel. Do not expose Jenkins administration openly.
+
+9. Jenkins Scripted Pipeline – Docker build and push (SETS 7, 9)
+
+Create a Jenkins credential (Username with password/token) with ID
+dockerhub-creds. Linux example; replace image and repository:
+
+    node {
+        def imageName = 'DOCKERHUB_USER/oltrs-app'
+
+        stage('Checkout') {
+            git branch: 'main', url: 'https://github.com/OWNER/REPOSITORY.git'
+        }
+        stage('Build and Test') {
+            sh 'mvn clean package'
+        }
+        stage('Docker Build') {
+            sh "docker build -t ${imageName}:latest ."
+        }
+        stage('Docker Push') {
+            withCredentials([usernamePassword(
+                credentialsId: 'dockerhub-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )]) {
+                sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                sh "docker push ${imageName}:latest"
+                sh 'docker logout'
+            }
+        }
+    }
+
+Docker must be installed and available to the Jenkins agent. Never
+hardcode passwords. If Maven fails, later stages are skipped unless the
+pipeline catches the error.
+
+10. Jenkins Email Extension (SET-4)
+
+Prerequisites: install Email Extension Plugin; configure SMTP under
+Manage Jenkins -> System -> Extended E-mail Notification; test SMTP. Use
+a real recipient and secure SMTP credential/app password.
+
+Scripted failure notification example:
+
+    node {
+        try {
+            stage('Checkout') {
+                git url: 'https://github.com/OWNER/REPOSITORY.git'
+            }
+            stage('Build') {
+                sh 'mvn clean package'
+            }
+        } catch (err) {
+            emailext(
+                subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Build failed. Check ${env.BUILD_URL}",
+                to: 'TEAM_EMAIL@example.com'
+            )
+            throw err
+        }
+    }
+
+Use bat instead of sh on Windows. Replace the email placeholder with the
+intended team email. For success emails, add a success path and a
+separate message.
+
+11. Kubernetes / Minikube (SETS 1–9)
+
+Check/start:
+
+    minikube version
+    kubectl version --client
+    minikube start --driver=docker
+    minikube status
+    kubectl get nodes
+
+Build and push image (if image is not already on Docker Hub):
+
+    docker build -t DOCKERHUB_USER/my-app:latest .
+    docker login
+    docker push DOCKERHUB_USER/my-app:latest
+
+Deploy, inspect, scale:
+
+    kubectl create deployment my-app --image=DOCKERHUB_USER/my-app:latest
+    kubectl get deployments
+    kubectl get pods
+    kubectl get pods -o wide
+    kubectl describe deployment my-app
+    kubectl scale deployment my-app --replicas=4
+    kubectl get deployment my-app
+    kubectl get pods
+
+Expose NodePort (replace target port with the application’s actual
+container port):
+
+    kubectl expose deployment my-app --type=NodePort --port=80 --target-port=8080
+    kubectl get services
+    kubectl describe service my-app
+    minikube service my-app --url
+    minikube service my-app
+
+--port is the Service port; --target-port is the application’s container
+port. NodePort is normally allocated in the 30000–32767 range.
+
+Troubleshooting:
+
+    kubectl get pods
+    kubectl describe pod POD_NAME
+    kubectl logs POD_NAME
+    kubectl logs POD_NAME --previous
+    kubectl get events --sort-by=.metadata.creationTimestamp
+    kubectl get svc
+    kubectl get endpoints my-app
+    kubectl get pods --show-labels
+
+If Service endpoints show <none>, ensure Service selector labels match
+Pod labels. For Pending pods, inspect events, node capacity, resource
+requests and PVCs. For ImagePullBackOff, verify image name/tag,
+visibility and registry credentials. For CrashLoopBackOff, inspect
+kubectl logs and describe pod.
+
+Self-healing:
+
+    kubectl delete pod POD_NAME
+    kubectl get pods -w
+
+Rolling update and rollback:
+
+    kubectl set image deployment/my-app my-app=DOCKERHUB_USER/my-app:v2
+    kubectl rollout status deployment/my-app
+    kubectl rollout history deployment/my-app
+    kubectl rollout undo deployment/my-app
+
+Cleanup:
+
+    kubectl delete service my-app
+    kubectl delete deployment my-app
+    kubectl get all
+    minikube stop
+    minikube delete
+
+12. Nagios with Docker (SETS 1, 2, 3, 4, 6, 8)
+
+One commonly used lab image:
+
+    docker pull jasonrivers/nagios:latest
+    docker run -d --name nagios -p 8081:80 jasonrivers/nagios:latest
+    docker ps
+    docker logs nagios
+
+Open http://localhost:8081 (or http://EC2_PUBLIC_IP:8081 on EC2, with
+matching Security Group rule). Image defaults and credentials can vary;
+inspect the image documentation/logs. Running the dashboard alone does
+not configure all host/service checks; monitoring definitions and
+network reachability are needed.
+
+13. AWS EC2 – launch and browser connection (ALL AWS sets)
+
+Console steps: 1. Start AWS Academy Learner Lab and open AWS Console. 2.
+EC2 -> Launch instance; choose the required region and Ubuntu AMI. 3.
+Select an eligible instance type (e.g. t2.micro/t3.micro if available).
+4. Create/download key pair if required; choose RSA .pem for SSH-key
+workflows. 5. Configure Security Group and launch. 6. Wait for Running
+and status checks 2/2. 7. Select instance -> Connect -> EC2 Instance
+Connect -> Connect using browser. 8. Username for Ubuntu is normally
+ubuntu.
+
+Browser EC2 Instance Connect avoids local .pem permission errors. If
+connection times out, check: instance Running; public IPv4; subnet route
+to Internet Gateway; Security Group TCP 22 from EC2 Instance Connect
+service path/managed prefix list; NACL; correct username; and EC2
+Instance Connect support. For direct SSH use My IP. A temporary SSH
+Anywhere rule can help isolate lab connectivity but restrict it again.
+
+Suggested inbound rules (only add app ports required by the question): -
+SSH TCP 22: My IP / regional EC2 Instance Connect managed prefix list. -
+HTTP TCP 80: Anywhere for a public website. - HTTPS TCP 443: Anywhere
+only if TLS is configured. - Custom TCP 8080: Anywhere only if host port
+8080 is used. - Custom TCP 9090: Anywhere only if host port 9090 is
+used. Never expose MySQL 3306 publicly.
+
+14. Ubuntu EC2 setup
+
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt install -y git docker.io nano curl
+    sudo systemctl enable --now docker
+    sudo systemctl status docker
+    git --version
+    docker --version
+    sudo docker ps
+
+Install Java/Maven if the project must be built on EC2:
+
+    sudo apt install -y openjdk-17-jdk maven
+    java -version
+    mvn -version
+
+Use the Java version required by the project’s pom.xml; older projects
+may need Java 8 or 11 instead of 17.
+
+Clone:
+
+    git clone REPO_URL
+    cd PROJECT_FOLDER
+    ls
+
+15. EC2 – static index.html with Nginx Docker (SETS 4, 5, 6)
+
+    mkdir website
+    cd website
+    nano index.html
+
+Example HTML:
+
+    <!DOCTYPE html>
+    <html><head><title>Food Management System</title></head>
+    <body><h1>Welcome to Food Management System</h1></body></html>
+
+Run Nginx using the current folder:
+
+    sudo docker run -d --name website-nginx -p 80:80 \
+      -v "$PWD":/usr/share/nginx/html:ro nginx:latest
+    sudo docker ps
+    sudo docker logs website-nginx
+    curl -I http://localhost
+
+Browse http://EC2_PUBLIC_IPV4.
+
+If Dockerfile is required, create:
+
+    FROM nginx:latest
+    COPY index.html /usr/share/nginx/html/index.html
+
+Then:
+
+    sudo docker build -t website-nginx .
+    sudo docker run -d --name website-nginx -p 80:80 website-nginx
+
+16. EC2 – clone GitHub and build Docker image
+
+    sudo apt update
+    sudo apt install -y git docker.io
+    sudo systemctl enable --now docker
+    git clone REPO_URL
+    cd PROJECT_FOLDER
+    ls
+    nano Dockerfile
+
+For a static website:
+
+    FROM nginx:latest
+    COPY . /usr/share/nginx/html/
+
+Build and run:
+
+    sudo docker build -t my-website .
+    sudo docker images
+    sudo docker run -d --name my-website -p 9090:80 my-website
+    sudo docker ps
+    sudo docker logs my-website
+
+Browse http://EC2_PUBLIC_IPV4:9090; allow inbound TCP 9090 if that is
+the host port requested. Use -p 80:80 if the question asks for port 80.
+
+17. EC2 – Maven WAR project inside Tomcat Docker (SETS 4, 5, 6)
+
+Inspect and build:
+
+    find . -maxdepth 3 -name pom.xml
+    mvn clean package
+    ls -l target
+
+Example Dockerfile for a WAR compatible with Tomcat 9 / Java 8:
+
+    FROM tomcat:9.0-jdk8
+    RUN rm -rf /usr/local/tomcat/webapps/*
+    COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
+    EXPOSE 8080
+    CMD ["catalina.sh", "run"]
+
+Build and run:
+
+    sudo docker build -t maven-web-app .
+    sudo docker run -d --name maven-web-container -p 9090:8080 maven-web-app
+    sudo docker ps
+    sudo docker logs maven-web-container
+    curl -I http://localhost:9090
+
+Browse http://EC2_PUBLIC_IPV4:9090. For standard host port 8080 use
+-p 8080:8080 and browse :8080.
+
+Ensure Java/Tomcat version matches the project. A Spring Boot executable
+JAR normally runs with Java rather than being copied into Tomcat. If the
+WAR is not generated, inspect Maven output and the target directory. If
+not using ROOT.war, include the WAR context path in the browser URL.
+
+18. EC2 public-access troubleshooting
+
+Test locally on EC2:
+
+    sudo docker ps
+    curl -I http://localhost:HOST_PORT
+    sudo docker logs CONTAINER_NAME
+    sudo ss -tulpn
+
+If local curl works but browser does not: 1. Check the current EC2
+Public IPv4. 2. Confirm Docker host-to-container port mapping. 3. Add
+matching Security Group inbound port (80/8080/9090 as used). 4. Confirm
+subnet route table has 0.0.0.0/0 to an Internet Gateway. 5. Check
+Network ACL return traffic. 6. Ensure the app listens on 0.0.0.0 inside
+the container. 7. Check OS firewall.
+
+If public IP changes after stop/start, use an Elastic IP when a stable
+IP is required. For container restart after reboot, use
+--restart unless-stopped, e.g.:
+
+    sudo docker run -d --restart unless-stopped --name app -p 80:80 IMAGE
+
+19. AWS cleanup (SETS 4, 5)
+
+    sudo docker stop CONTAINER_NAME
+    sudo docker rm CONTAINER_NAME
+    sudo docker rmi IMAGE_NAME
+
+Then AWS Console -> EC2 -> Instances -> select instance -> Instance
+state -> Terminate instance -> confirm. End the AWS Academy Learner Lab
+after completion. Termination is different from stopping and is
+generally irreversible.
+
+20. Quick exam decision checklist
+
+DOCKER / COMPOSE: - Identify services (Flask+Nginx, WordPress+MySQL,
+application+DB, application+Nagios). - Identify host/container ports,
+volumes, dependencies, network and persistence needs.
+
+JENKINS: - Identify Freestyle vs Scripted vs Declarative vs Pipeline
+View. - Use exact repo URL and branch. - Match Windows bat or Linux
+sh. - Identify Maven stages, artifact archive, webhook/schedule, Docker
+push or email.
+
+KUBERNETES: - Identify image, actual container port, replica count and
+Service type. - Verify nodes, deployment, pods, service, endpoints and
+browser URL. - Know scaling, self-healing, rollout/rollback and cleanup
+commands.
+
+NAGIOS: - Start the dashboard container, expose its port, then configure
+host/service checks.
+
+AWS: - Identify OS, application type (static Nginx, Maven WAR/Tomcat,
+Docker app), requested host port and matching Security Group rule. -
+Browser EC2 Instance Connect is the chosen access method in your
+practice. - Test using curl localhost:PORT before testing from your
+browser. - Clean up containers, EC2 instance and end the lab.
+
+END OF REFERENCE

@@ -1,0 +1,10 @@
+configure Jenkins tools -- git,jdk,maven
+create a new item with a name and freestyle project
+paste the GitHub url
+branches to build - */main
+goto build steps - maven and goals - clean test package
+post build action - archive the artifacts **/*
+done save and build now
+verify the jar file in build artifacts
+generate a build failure
+Configure build triggers - Poll SCM enter * * * * * 

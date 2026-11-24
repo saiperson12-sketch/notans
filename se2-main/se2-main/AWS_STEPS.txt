@@ -1,0 +1,37 @@
+Ec2 Open
+Name ubuntu
+choose a key pair
+
+Allow HTTP traffic from the internet->allow this
+
+Network Settings->Edit
+ssh->custom, choose com.amazonaws.us-east-1.ec2-instance-connect
+
+add security group -> cutom one ->port some 6060, anywhere launch instance
+
+check instances
+
+sudo apt update
+sudo apt install docker.io
+sudo apt install git
+sudo apt install meven
+
+git clone
+nano Dockerfile -> keep contents in it
+
+FROM tomcat:9.0-jdk8
+
+RUN rm -rf /usr/local/tomcat/webapps/*
+
+COPY target/ticket-reservation.war /usr/local/tomcat/webapps/ROOT.war
+
+EXPOSE 8080
+
+CMD ["catalina.sh", "run"]
+
+mvn clean package
+sudo docker build -t oltrs-app .
+sudo docker run -d --name oltrs-container -p 8080:8080 oltrs-app
+sudo docker ps
+
+http://<EC2_PUBLIC_IP>:8080

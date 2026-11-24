@@ -1,0 +1,34 @@
+FROM python:3.9 ->dockerfile
+WORKDIR /app
+COPY . /app
+RUN pip install -r requirements.txt 
+EXPOSE 5000 CMD 
+["python", "app.py"]
+
+
+version: '3'->yml
+
+services:
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_PASSWORD: example
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+
+
+apiVersion: v1 ->yaml
+kind: Pod
+ metadata:
+	name: my-app 
+	spec:
+	containers:
+	- name: my-container image: nginx:latest ports:
+	- containerPort: 80
+kubectl apply -f simple-app.yaml

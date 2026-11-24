@@ -1,0 +1,34 @@
+K8s
+minikube start --driver=docker	
+minikube start
+minikube image load food-management:v1
+kubectl get nodes
+kubectl create deployment library-app --image=nginx --replicas=2
+kubectl expose deployment library-app --type=NodePort --port=80
+kubectl get services
+minikube service library-app
+kubectl scale deployment library-app --replicas=5
+kubectl delete pod POD_NAME(from get pods)
+kubectl set image deployment/library-app nginx=nginx:1.28
+kubectl rollout status deployment/library-app
+kubectl rollout undo deployment/library-app
+kubectl rollout status deployment/library-app
+kubectl describe deployment library-app
+kubectl delete deployment library-app
+minikube stop
+
+minikube version
+kubectl version --client
+docker --version
+
+
+nagios
+docker pull jasonrivers/nagios:latest
+docker run -d --name nagios -p 8082:80 -e NAGIOSADMIN_USER=nagiosadmin -e NAGIOSADMIN_PASS=Nagios123! jasonrivers/nagios:latest
+
+Username: nagiosadmin
+Password: nagios
+docker exec -it nagios bash
+ls /opt/nagios/etc/objects/
+cat /opt/nagios/etc/objects/localhost.cfg
+
